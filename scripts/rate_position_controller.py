@@ -65,9 +65,9 @@ class RatePositionController:
 		# Topics to interact
 		self.master_state_topic = self.read_parameter('~master_state_topic', '/phantom/state')
 		self.feedback_topic = self.read_parameter('~feedback_topic', '/phantom/force_feedback')
-		self.slave_state_topic = self.read_parameter('~slave_state_topic', '/grips_simple_gripper/state')
-		self.ik_mc_topic = self.read_parameter('~ik_mc_topic', '/grips_simple_gripper/ik_motion_control')
-		self.gripper_topic = self.read_parameter('~gripper_topic', '/grips_simple_gripper/GRIP/command')
+		self.slave_state_topic = self.read_parameter('~slave_state_topic', '/grips_state')
+		self.ik_mc_topic = self.read_parameter('~ik_mc_topic', '/ik_motion_control')
+		self.gripper_topic = self.read_parameter('~gripper_topic', '/GRIP/command')
 		# Workspace definition
 		self.units = self.read_parameter('~units', 'mm')
 		width = self.read_parameter('~width', 140.0)
@@ -101,7 +101,7 @@ class RatePositionController:
 		self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
 		self.vis_pub = rospy.Publisher('visualization_marker', Marker)
 		# Initial values
-		self.frame_id = self.read_parameter('~reference_frame', '/grips_simple_gripper/world')
+		self.frame_id = self.read_parameter('~reference_frame', 'world')
 		self.colors = TextColors()
 		self.gripper_cmd = 0.0
 		self.center_pos = np.zeros(3)

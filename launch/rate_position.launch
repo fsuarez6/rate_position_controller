@@ -2,7 +2,7 @@
 	<!-- Phantom node -->
 	<arg name="units" default="mm"/>
 	<include file="$(find omni_common)/launch/omni_state.launch">
-    <arg name="reference_frame" value="/world"/>
+    <arg name="reference_frame" value="world"/>
 		<arg name="units" value="$(arg units)"/>
 		<arg name="publish_rate" value="1000"/>
 		<arg name="omni_name" value="phantom"/>
@@ -14,7 +14,7 @@
 		<!-- Topics to interact -->
 		<param name="master_state_topic" type="string" value="/phantom/state"/>
 		<param name="feedback_topic" type="string" value="/phantom/force_feedback"/>
-		<param name="slave_state_topic" type="string" value="/state"/>
+		<param name="slave_state_topic" type="string" value="/grips_state"/>
 		<param name="ik_mc_topic" type="string" value="/ik_motion_control"/>
 		<param name="fk_mc_topic" type="string" value="/fk_motion_control"/>
 		<param name="publish_frequency" type="double" value="1000"/>
@@ -25,7 +25,7 @@
 		<param name="depth" type="double" value="55"/>
 		<param name="hysteresis" type="double" value="3.0"/>
 		<!-- Position parameters -->
-		<param name="reference_frame" value="/world"/>
+		<param name="reference_frame" value="world"/>
 		<param name="position_ratio" type="double" value="250"/>
 		<!-- Force feedback parameters -->
 		<param name="k_center" type="double" value="0.1"/>
