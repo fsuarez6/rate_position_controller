@@ -65,9 +65,9 @@ class RatePositionController:
     # Topics to interact
     self.master_state_topic = self.read_parameter('~master_state_topic', '/phantom/state')
     self.feedback_topic = self.read_parameter('~feedback_topic', '/phantom/force_feedback')
-    self.slave_state_topic = self.read_parameter('~slave_state_topic', '/grips_state')
-    self.ik_mc_topic = self.read_parameter('~ik_mc_topic', '/ik_motion_control')
-    self.gripper_topic = self.read_parameter('~gripper_topic', '/GRIP/command')
+    self.slave_state_topic = self.read_parameter('~slave_state_topic', '/grips/state')
+    self.ik_mc_topic = self.read_parameter('~ik_mc_topic', '/grips/ik_motion_control')
+    self.gripper_topic = self.read_parameter('~gripper_topic', '/grips/GRIP/command')
     # Workspace definition
     self.units = self.read_parameter('~units', 'mm')
     width = self.read_parameter('~width', 140.0)
@@ -232,9 +232,10 @@ class RatePositionController:
       cmd = 5.0
     else:
       cmd = -5.0
-    #~ if cmd != self.gripper_cmd:
-    self.gripper_pub.publish(cmd)
-      #~ self.gripper_cmd = cmd
+    try:
+      self.gripper_pub.publish(cmd)
+    except rospy.exceptions.ROSException:
+      pass
   
   def change_axes(self, position, rotation, idx):
     rpy = tr.euler_from_quaternion(rotation)
