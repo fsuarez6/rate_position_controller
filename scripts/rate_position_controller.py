@@ -23,7 +23,7 @@ import smach
 import smach_ros
 from smach import CBState
 # Math
-from math import pi, exp, sin
+from math import pi, exp, sin, sqrt
 import numpy as np
 import tf.transformations as tr
 
@@ -105,7 +105,7 @@ class RatePositionController:
     self.colors = TextColors()
     self.gripper_cmd = 0.0
     self.center_pos = np.zeros(3)
-    self.master_pos = np.zeros(3)
+    self.master_pos = None
     self.master_rot = np.array([0, 0, 0, 1])
     self.master_vel = np.zeros(3)
     self.master_dir = np.zeros(3)
@@ -115,9 +115,9 @@ class RatePositionController:
     # Slave command
     self.slave_synch_pos = np.zeros(3)
     
-    self.loginfo('Waiting for [%s] topic' % (self.slave_state_topic))
+    self.loginfo('Waiting for [%s] and [%s] topics' % (self.master_state_topic, self.slave_state_topic))
     while not rospy.is_shutdown():
-      if self.slave_pos == None:
+      if (self.slave_pos == None) or (self.master_pos == None):
         rospy.sleep(0.01)
       else:
         self.loginfo('Rate position controller running')
@@ -132,6 +132,8 @@ class RatePositionController:
     # Start the timer that will publish the ik commands
     self.timer = rospy.Timer(rospy.Duration(1.0/self.publish_frequency), self.publish_command)
     
+    self.loginfo('State machine state: GO_TO_CENTER')
+    
   @smach.cb_interface(outcomes=['lock', 'succeeded', 'aborted'])
   def go_to_center(user_data, self):
     if not np.allclose(self.center_pos, self.master_pos, atol=self.hysteresis):
@@ -139,10 +141,12 @@ class RatePositionController:
       self.send_feedback(force)
       return 'lock'
     else:
+      rospy.loginfo('center pos: ' + str(self.center_pos) + ' master_pos: ' + str(self.master_pos))
       self.slave_synch_pos = np.array(self.slave_pos)
       self.command_pos = np.array(self.slave_pos)
       self.command_rot = np.array(self.slave_rot)
       self.draw_position_region(self.slave_synch_pos)
+      self.loginfo('State machine transitioning: GO_TO_CENTER:succeeded-->POSITION_CONTROL')
       return 'succeeded'
   
   @smach.cb_interface(outcomes=['stay', 'leave', 'aborted'])
@@ -155,6 +159,7 @@ class RatePositionController:
       self.command_pos = np.array(self.slave_pos)
       self.command_rot = np.array(self.slave_rot)
       self.vib_start_time = rospy.get_time()
+      self.loginfo('State machine transitioning: POSITION_CONTROL:leave-->VIBRATORY_PHASE')
       return 'leave'
     
   @smach.cb_interface(outcomes=['vibrate', 'succeeded', 'aborted'])
@@ -168,16 +173,25 @@ class RatePositionController:
     else:
       # The pivot point should be inside the position area but it's better when we use the center
       #~ self.rate_pivot = self.master_pos - self.pivot_dist * self.normalize_vector(self.master_pos)
-      self.rate_pivot = np.array(self.center_pos)
+      self.rate_pivot = np.array(self.master_pos)
+      self.loginfo('State machine transitioning: VIBRATORY_PHASE:succeeded-->RATE_CONTROL')
       return 'succeeded'
   
   @smach.cb_interface(outcomes=['stay', 'leave', 'collision', 'aborted'])
   def rate_control(user_data, self):
     if not self.inside_workspace(self.master_pos):
-      force = self.k_rate * (self.rate_pivot - self.master_pos) - self.b_rate * self.master_vel
-      self.send_feedback(force)
+      # Send the force feedback to the master
+      force = self.k_rate * (self.master_pos - self.center_pos) + self.b_rate * self.master_vel
+      self.send_feedback(-force)
+      # Send the rate command to the slave
+      distance = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) / 2
+      self.command_pos += self.k_rate * (distance * self.normalize_vector(self.master_pos)) / self.position_ratio
+      self.command_rot = np.array(self.master_rot)
       return 'stay'
     else:
+      self.command_pos = np.array(self.slave_pos)
+      self.command_rot = np.array(self.slave_rot)
+      self.loginfo('State machine transitioning: RATE_CONTROL:leave-->GO_TO_CENTER')
       return 'leave'
     
   @smach.cb_interface(outcomes=['succeeded', 'aborted'])
