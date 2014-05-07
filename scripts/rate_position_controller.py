@@ -73,7 +73,7 @@ class RatePositionController:
     width = self.read_parameter('~width', 140.0)
     height = self.read_parameter('~height', 100.0)
     depth = self.read_parameter('~depth', 55.0)
-    self.workspace = np.array([width, height, depth])
+    self.workspace = np.array([width, depth, height])
     self.hysteresis = self.read_parameter('~hysteresis', 3.0)
     self.pivot_dist = self.read_parameter('~pivot_dist', 5.0)
     # Force feedback parameters
@@ -228,17 +228,17 @@ class RatePositionController:
     feedback_msg = OmniFeedback()
     feedback_msg.force.x = force[0]
     feedback_msg.force.y = force[1]
-    feedback_msg.force.z = -force[2]
+    feedback_msg.force.z = force[2]
     feedback_msg.position.x = self.center_pos[0]
     feedback_msg.position.y = self.center_pos[1]
     feedback_msg.position.z = self.center_pos[2]
     self.feedback_pub.publish(feedback_msg)
   
-  def cb_master_state(self, msg):
-    # DO NOT print to the console within this function
-    self.master_pos = np.array([msg.pose.position.x, msg.pose.position.y, -msg.pose.position.z])
+  # DO NOT print to the console within this function
+  def cb_master_state(self, msg):    
+    self.master_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
     self.master_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-    self.master_vel = np.array([msg.velocity.x, msg.velocity.y, -msg.velocity.z])
+    self.master_vel = np.array([msg.velocity.x, msg.velocity.y, msg.velocity.z])
     self.master_dir = self.normalize_vector(self.master_vel)
     # Control the gripper
     cmd = self.gripper_cmd
@@ -251,22 +251,12 @@ class RatePositionController:
     except rospy.exceptions.ROSException:
       pass
   
-  def change_axes(self, position, rotation, idx):
-    rpy = tr.euler_from_quaternion(rotation)
-    #~ R = tr.quaternion_matrix(rotation)
-    #~ R[:,0:3] = R[:,idx]
-    q = tr.quaternion_from_euler(rpy[idx[0]], rpy[idx[1]], rpy[idx[2]])
-    return position[idx], q
-  
   def cb_slave_state(self, msg):
-    # Notice that we are changing Y <---> Z
-    position = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-    orientation = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-    self.slave_pos, self.slave_rot = self.change_axes(position, orientation, [0,2,1])   
+    self.slave_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
+    self.slave_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
   
   def publish_command(self, event):
-    # Notice that we are changing Y <---> Z
-    position, orientation = self.change_axes(self.command_pos, self.command_rot, [0,2,1])
+    position, orientation = self.command_pos, self.command_rot
     ik_mc_msg = PoseStamped()
     ik_mc_msg.header.frame_id = self.frame_id
     ik_mc_msg.header.stamp = rospy.Time.now()
@@ -282,8 +272,7 @@ class RatePositionController:
     except rospy.exceptions.ROSException:
       pass
   
-  def draw_position_region(self, center_pos, idx = [0,2,1]):
-    # Notice that we are changing Y <---> Z
+  def draw_position_region(self, center_pos):
     marker = Marker()
     marker.header.frame_id = self.frame_id
     marker.header.stamp = rospy.Time.now()
@@ -291,13 +280,13 @@ class RatePositionController:
     marker.type = marker.SPHERE
     marker.ns = 'position_region'
     marker.action = marker.ADD
-    marker.pose.position.x = center_pos[idx[0]]
-    marker.pose.position.y = center_pos[idx[1]]
-    marker.pose.position.z = center_pos[idx[2]]
+    marker.pose.position.x = center_pos[0]
+    marker.pose.position.y = center_pos[1]
+    marker.pose.position.z = center_pos[2]
     #~ Workspace ellipsoid: self.workspace
-    marker.scale.x = 2 * self.workspace[idx[0]]/self.position_ratio
-    marker.scale.y = 2 * self.workspace[idx[1]]/self.position_ratio
-    marker.scale.z = 2 * self.workspace[idx[2]]/self.position_ratio
+    marker.scale.x = 2 * self.workspace[0]/self.position_ratio
+    marker.scale.y = 2 * self.workspace[1]/self.position_ratio
+    marker.scale.z = 2 * self.workspace[2]/self.position_ratio
     marker.color.a = 0.5
     marker.color.r = 1.0
     marker.color.g = 1.0
