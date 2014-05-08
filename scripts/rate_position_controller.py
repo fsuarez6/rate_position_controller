@@ -112,6 +112,7 @@ class RatePositionController:
     self.slave_pos = None
     self.slave_rot = np.array([0, 0, 0, 1])
     self.timer = None
+    self.force_feedback = np.zeros(3)
     # Slave command
     self.slave_synch_pos = np.zeros(3)
     
@@ -137,11 +138,11 @@ class RatePositionController:
   @smach.cb_interface(outcomes=['lock', 'succeeded', 'aborted'])
   def go_to_center(user_data, self):
     if not np.allclose(self.center_pos, self.master_pos, atol=self.hysteresis):
-      force = self.k_center * (self.center_pos - self.master_pos) - self.b_center * self.master_vel
-      self.send_feedback(force)
+      self.force_feedback = self.k_center * (self.center_pos - self.master_pos) - self.b_center * self.master_vel
       return 'lock'
     else:
       rospy.loginfo('center pos: ' + str(self.center_pos) + ' master_pos: ' + str(self.master_pos))
+      self.force_feedback = np.zeros(3)
       self.slave_synch_pos = np.array(self.slave_pos)
       self.command_pos = np.array(self.slave_pos)
       self.command_rot = np.array(self.slave_rot)
@@ -167,12 +168,12 @@ class RatePositionController:
     if rospy.get_time() < self.vib_start_time + self.vib_time:
       t = rospy.get_time() - self.vib_start_time 
       amplitude = -self.vib_a*exp(-self.vib_c*t)*sin(2*pi*self.vib_freq*t);
-      force = amplitude * self.master_dir
-      self.send_feedback(force)
+      self.force_feedback = amplitude * self.master_dir
       return 'vibrate'
     else:
       # The pivot point should be inside the position area but it's better when we use the center
       #~ self.rate_pivot = self.master_pos - self.pivot_dist * self.normalize_vector(self.master_pos)
+      self.force_feedback = np.zeros(3)
       self.rate_pivot = np.array(self.master_pos)
       self.loginfo('State machine transitioning: VIBRATORY_PHASE:succeeded-->RATE_CONTROL')
       return 'succeeded'
@@ -181,8 +182,7 @@ class RatePositionController:
   def rate_control(user_data, self):
     if not self.inside_workspace(self.master_pos):
       # Send the force feedback to the master
-      force = self.k_rate * (self.master_pos - self.center_pos) + self.b_rate * self.master_vel
-      self.send_feedback(-force)
+      self.force_feedback = (self.k_rate * (self.master_pos - self.center_pos) + self.b_rate * self.master_vel) * -1.0
       # Send the rate command to the slave
       distance = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) / 2
       self.command_pos += self.k_rate * (distance * self.normalize_vector(self.master_pos)) / self.position_ratio
@@ -191,6 +191,7 @@ class RatePositionController:
     else:
       self.command_pos = np.array(self.slave_pos)
       self.command_rot = np.array(self.slave_rot)
+      self.force_feedback = np.zeros(3)
       self.loginfo('State machine transitioning: RATE_CONTROL:leave-->GO_TO_CENTER')
       return 'leave'
     
@@ -224,11 +225,11 @@ class RatePositionController:
     result /= np.sqrt(np.sum((result ** 2)))
     return result
   
-  def send_feedback(self, force):
+  def send_feedback(self):
     feedback_msg = OmniFeedback()
-    feedback_msg.force.x = force[0]
-    feedback_msg.force.y = force[1]
-    feedback_msg.force.z = force[2]
+    feedback_msg.force.x = self.force_feedback[0]
+    feedback_msg.force.y = self.force_feedback[1]
+    feedback_msg.force.z = self.force_feedback[2]
     feedback_msg.position.x = self.center_pos[0]
     feedback_msg.position.y = self.center_pos[1]
     feedback_msg.position.z = self.center_pos[2]
@@ -269,6 +270,7 @@ class RatePositionController:
     ik_mc_msg.pose.orientation.w = orientation[3]
     try:
       self.ik_mc_pub.publish(ik_mc_msg)
+      self.send_feedback()
     except rospy.exceptions.ROSException:
       pass
   
