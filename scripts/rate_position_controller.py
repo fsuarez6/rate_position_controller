@@ -63,16 +63,19 @@ class RatePositionController:
     
     # Read all the parameters from the parameter server
     # Topics to interact
-    self.master_state_topic = self.read_parameter('~master_state_topic', '/phantom/state')
-    self.feedback_topic = self.read_parameter('~feedback_topic', '/phantom/force_feedback')
-    self.slave_state_topic = self.read_parameter('~slave_state_topic', '/grips/state')
-    self.ik_mc_topic = self.read_parameter('~ik_mc_topic', '/grips/ik_motion_control')
-    self.gripper_topic = self.read_parameter('~gripper_topic', '/grips/GRIP/command')
+    master_name = self.read_parameter('~master_name', 'phantom')
+    slave_name = self.read_parameter('~slave_name', 'grips')
+    self.master_state_topic = '/%s/state' % master_name
+    self.feedback_topic = '/%s/force_feedback' % master_name
+    self.slave_state_topic = '/%s/state' % slave_name
+    self.ik_mc_topic = '/%s/ik_command' % slave_name
+    self.gripper_topic = '/%s/GRIP/command' % slave_name
     # Workspace definition
     self.units = self.read_parameter('~units', 'mm')
-    width = self.read_parameter('~width', 140.0)
-    height = self.read_parameter('~height', 100.0)
-    depth = self.read_parameter('~depth', 55.0)
+    width = self.read_parameter('~workspace/width', 140.0)
+    height = self.read_parameter('~workspace/height', 100.0)
+    depth = self.read_parameter('~workspace/depth', 55.0)
+    self.center_pos = self.read_parameter('~workspace/center', [0, 0 ,0])
     self.workspace = np.array([width, depth, height])
     self.hysteresis = self.read_parameter('~hysteresis', 3.0)
     self.pivot_dist = self.read_parameter('~pivot_dist', 5.0)
@@ -83,7 +86,7 @@ class RatePositionController:
     self.b_rate = self.read_parameter('~b_rate', 0.003)
     # Position parameters
     self.position_ratio = self.read_parameter('~position_ratio', 250)
-    self.publish_frequency = self.read_parameter('~publish_frequency', 1000.0)
+    self.publish_frequency = self.read_parameter('~publish_rate', 1000.0)
     # Vibration parameters
     self.vib_a = 2.0            # Amplitude (mm)
     self.vib_c = 5.0            # Damping
@@ -104,7 +107,6 @@ class RatePositionController:
     self.frame_id = self.read_parameter('~reference_frame', 'world')
     self.colors = TextColors()
     self.gripper_cmd = 0.0
-    self.center_pos = np.zeros(3)
     self.master_pos = None
     self.master_rot = np.array([0, 0, 0, 1])
     self.master_vel = np.zeros(3)
@@ -237,7 +239,7 @@ class RatePositionController:
   
   # DO NOT print to the console within this function
   def cb_master_state(self, msg):    
-    self.master_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
+    self.master_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]) - self.center_pos
     self.master_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
     self.master_vel = np.array([msg.velocity.x, msg.velocity.y, msg.velocity.z])
     self.master_dir = self.normalize_vector(self.master_vel)

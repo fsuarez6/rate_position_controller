@@ -1,39 +1,20 @@
 <launch>
-  
-  <arg name="units" default="mm"/>
+  <arg name="master_name" default="haptic_device"/>
+  <arg name="slave_name" default="grips"/>
   
   <!-- Haptic device interface -->
   <node name="haptic_device_interface" pkg="rate_position_controller" type="haptic_device_interface.py" output="screen"> 
-    <param name="device_name" type="string" value="haptic_device"/>
-    <param name="reference_frame" type="string" value="world"/>
-    <param name="units" type="string" value="$(arg units)"/>
+    <param name="device_name" type="string" value="$(arg master_name)"/>
     <param name="write_ip" type="string" value="192.168.0.5"/>
     <param name="read_port" type="int" value="5053"/>
     <param name="write_port" type="int" value="5054"/>
+    <rosparam command="load" file="$(find rate_position_controller)/config/haptic_device.yaml" />
   </node>
   
   <!-- Rate position controller -->
-  <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen"> 
-    <!-- Topics to interact -->
-    <param name="master_state_topic" type="string" value="/haptic_device/state"/>
-    <param name="feedback_topic" type="string" value="/haptic_device/force_feedback"/>
-    <param name="slave_state_topic" type="string" value="/grips/state"/>
-    <param name="ik_mc_topic" type="string" value="/grips/ik_command"/>
-    <param name="fk_mc_topic" type="string" value="/grips/fk_command"/>
-    <param name="publish_frequency" type="double" value="1000"/>
-    <!-- Workspace definition PHaNTOM (X: 160, Y: 120 and Z: 70 mm) -->
-    <param name="units" type="string" value="$(arg units)"/>
-    <param name="width" type="double" value="140"/>
-    <param name="height" type="double" value="100"/>
-    <param name="depth" type="double" value="55"/>
-    <param name="hysteresis" type="double" value="3.0"/>
-    <!-- Position parameters -->
-    <param name="reference_frame" value="world"/>
-    <param name="position_ratio" type="double" value="500"/>
-    <!-- Force feedback parameters -->
-    <param name="k_center" type="double" value="0.1"/>
-    <param name="b_center" type="double" value="0.003"/>
-    <param name="k_rate" type="double" value="0.015"/>
-    <param name="b_rate" type="double" value="0.003"/>
-  </node> -->
+  <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen">
+    <param name="master_name" type="string" value="$(arg master_name)"/>
+    <param name="slave_name" type="string" value="$(arg slave_name)"/>
+    <rosparam command="load" file="$(find rate_position_controller)/config/haptic_device.yaml" />
+  </node>
 </launch>

@@ -1,36 +1,17 @@
 <launch>
+  <arg name="master_name" default="haptic_device"/>
+  <arg name="slave_name" default="grips"/>
+  
   <!-- Phantom node -->
-  <arg name="units" default="mm"/>
-  <include file="$(find omni_common)/launch/omni_state.launch">
-    <arg name="reference_frame" value="world"/>
-    <arg name="units" value="$(arg units)"/>
-    <arg name="publish_rate" value="1000"/>
-    <arg name="omni_name" value="phantom"/>
-    
-  </include>
+  <node name="omni_state" pkg="omni_common" type="omni_state" output="screen"> 
+    <param name="omni_name" type="string" value="$(arg master_name)"/>
+    <rosparam command="load" file="$(find rate_position_controller)/config/phantom_omni.yaml" />
+  </node>
   
   <!-- Rate position controller -->
-  <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen"> 
-    <!-- Topics to interact -->
-    <param name="master_state_topic" type="string" value="/phantom/state"/>
-    <param name="feedback_topic" type="string" value="/phantom/force_feedback"/>
-    <param name="slave_state_topic" type="string" value="/grips/state"/>
-    <param name="ik_mc_topic" type="string" value="/grips/ik_command"/>
-    <param name="fk_mc_topic" type="string" value="/grips/fk_command"/>
-    <param name="publish_frequency" type="double" value="1000"/>
-    <!-- Workspace definition PHaNTOM (X: 160, Y: 120 and Z: 70 mm) -->
-    <param name="units" type="string" value="$(arg units)"/>
-    <param name="width" type="double" value="140"/>
-    <param name="height" type="double" value="100"/>
-    <param name="depth" type="double" value="55"/>
-    <param name="hysteresis" type="double" value="3.0"/>
-    <!-- Position parameters -->
-    <param name="reference_frame" value="world"/>
-    <param name="position_ratio" type="double" value="500"/>
-    <!-- Force feedback parameters -->
-    <param name="k_center" type="double" value="0.1"/>
-    <param name="b_center" type="double" value="0.003"/>
-    <param name="k_rate" type="double" value="0.015"/>
-    <param name="b_rate" type="double" value="0.003"/>
+  <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen">
+    <param name="master_name" type="string" value="$(arg master_name)"/>
+    <param name="slave_name" type="string" value="grips"/>
+    <rosparam command="load" file="$(find rate_position_controller)/config/phantom_omni.yaml" />
   </node>
 </launch>
