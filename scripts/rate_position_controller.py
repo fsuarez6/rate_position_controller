@@ -88,13 +88,14 @@ class RatePositionController:
     self.position_ratio = self.read_parameter('~position_ratio', 250)
     self.publish_frequency = self.read_parameter('~publish_rate', 1000.0)
     # Vibration parameters
-    self.vib_a = 2.0            # Amplitude (mm)
-    self.vib_c = 5.0            # Damping
-    self.vib_freq = 30.0        # Frequency (Hz)
-    self.vib_time = 0.3         # Duration (s)
+    self.vib_a = self.read_parameter('~vibration/a', 2.0)             # Amplitude (mm)
+    self.vib_c = self.read_parameter('~vibration/c', 5.0)             # Damping
+    self.vib_freq = self.read_parameter('~vibration/frequency', 30.0) # Frequency (Hz)
+    self.vib_time = self.read_parameter('~vibration/duration', 0.3)   # Duration (s)
     self.vib_start_time = 0.0
     # Rate parameters
     self.rate_pivot = np.zeros(3)
+    self.rate_gain = self.read_parameter('~rate_gain', 1.0) 
     
     # Setup Subscribers/Publishers
     rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
@@ -139,11 +140,10 @@ class RatePositionController:
     
   @smach.cb_interface(outcomes=['lock', 'succeeded', 'aborted'])
   def go_to_center(user_data, self):
-    if not np.allclose(self.center_pos, self.master_pos, atol=self.hysteresis):
-      self.force_feedback = self.k_center * (self.center_pos - self.master_pos) - self.b_center * self.master_vel
+    if not np.allclose(np.zeros(3), self.master_pos, atol=self.hysteresis):
+      self.force_feedback = (self.k_center * self.master_pos + self.b_center * self.master_vel) * -1.0
       return 'lock'
     else:
-      rospy.loginfo('center pos: ' + str(self.center_pos) + ' master_pos: ' + str(self.master_pos))
       self.force_feedback = np.zeros(3)
       self.slave_synch_pos = np.array(self.slave_pos)
       self.command_pos = np.array(self.slave_pos)
@@ -184,10 +184,10 @@ class RatePositionController:
   def rate_control(user_data, self):
     if not self.inside_workspace(self.master_pos):
       # Send the force feedback to the master
-      self.force_feedback = (self.k_rate * (self.master_pos - self.center_pos) + self.b_rate * self.master_vel) * -1.0
+      self.force_feedback = (self.k_rate * self.master_pos + self.b_rate * self.master_vel) * -1.0
       # Send the rate command to the slave
-      distance = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) / 2
-      self.command_pos += self.k_rate * (distance * self.normalize_vector(self.master_pos)) / self.position_ratio
+      distance = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) / self.position_ratio
+      self.command_pos += (self.rate_gain * distance * self.normalize_vector(self.master_pos)) / self.position_ratio
       self.command_rot = np.array(self.master_rot)
       return 'stay'
     else:

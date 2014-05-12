@@ -32,20 +32,21 @@ class HardwareInterface(LabviewServer):
       if data:
         # Serialize received UDP message
         recv_msg.deserialize(data)
-        # TODO: Do I need to add the time stamp ??
-        #~ self.recv_msg.header.stamp = rospy.Time.now()
+        recv_msg.header.stamp = rospy.Time.now()
         # Publish device state
         self.state_pub.publish(recv_msg)
         # Publish device pose
         pose_msg.header = recv_msg.header
         pose_msg.pose = recv_msg.pose
+        pose_msg.pose.position.x /= 1000.0
+        pose_msg.pose.position.y /= 1000.0
+        pose_msg.pose.position.z /= 1000.0
         self.pose_pub.publish(pose_msg)
         
   def cb_feedback(self, msg):
-    feedback = OmniFeedback()
     # Serialize cmd_msg
     file_str = StringIO()
-    feedback.serialize(file_str)
+    msg.serialize(file_str)
     # Send over udp the feedback omni_msgs/OmniFeedback
     self.write_socket.sendto(file_str.getvalue(), (self.write_ip, self.write_port))
 

@@ -18,3 +18,9 @@ k_center: 0.1
 b_center: 0.003
 k_rate: 0.015
 b_rate: 0.003
+rate_gain: 0.5
+vibration:
+  a: 2.0
+  c: 5.0
+  frequency: 30.0
+  duration: 0.3
