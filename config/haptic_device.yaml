@@ -14,8 +14,8 @@ reference_frame: world
 position_ratio: 500
 pivot_dist: 8.0
 # Force feedback parameters
-k_center: 0.1
-b_center: 0.05
+k_center: 0.2
+b_center: -0.003
 k_rate: 0.015
 b_rate: 0.003
 rate_gain: 0.5
