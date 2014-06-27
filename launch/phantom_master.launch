@@ -11,7 +11,7 @@
   <!-- Rate position controller -->
   <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen">
     <param name="master_name" type="string" value="$(arg master_name)"/>
-    <param name="slave_name" type="string" value="grips"/>
+    <param name="slave_name" type="string" value="$(arg slave_name)"/>
     <rosparam command="load" file="$(find rate_position_controller)/config/phantom_omni.yaml" />
   </node>
 </launch>
