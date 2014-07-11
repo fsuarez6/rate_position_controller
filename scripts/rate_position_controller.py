@@ -85,8 +85,10 @@ class RatePositionController:
     self.k_rate = self.read_parameter('~k_rate', 0.05)
     self.b_rate = self.read_parameter('~b_rate', 0.003)
     # Position parameters
-    self.position_ratio = self.read_parameter('~position_ratio', 250)
+    self.rpy_offset = self.read_parameter('~rpy_offset', [0,0,0])
+    self.q_offset = tr.quaternion_from_euler(*self.rpy_offset)
     self.publish_frequency = self.read_parameter('~publish_rate', 1000.0)
+    self.position_ratio = self.read_parameter('~position_ratio', 250)
     # Vibration parameters
     self.vib_a = self.read_parameter('~vibration/a', 2.0)             # Amplitude (mm)
     self.vib_c = self.read_parameter('~vibration/c', 5.0)             # Damping
@@ -241,6 +243,7 @@ class RatePositionController:
   def cb_master_state(self, msg):    
     self.master_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]) - self.center_pos
     self.master_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+    self.master_rot = tr.quaternion_multiply(self.q_offset, self.master_rot)
     self.master_vel = np.array([msg.velocity.x, msg.velocity.y, msg.velocity.z])
     self.master_dir = self.normalize_vector(self.master_vel)
     # Control the gripper

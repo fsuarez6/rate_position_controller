@@ -1,17 +1,26 @@
 <launch>
   <arg name="master_name" default="haptic_device"/>
-  <arg name="slave_name" default="grips"/>
+  <arg name="slave_name" default="baxter"/>
+  <arg name="ref_frame" default="base"/>
+  <arg name="rpy_offset" default="[3.14159, 0, 0]"/>
+<!--
+  -1.5708
+-->
   
   <!-- Phantom node -->
   <node name="omni_state" pkg="omni_common" type="omni_state" output="screen"> 
     <param name="omni_name" type="string" value="$(arg master_name)"/>
+    <param name="publish_rate" type="double" value="100"/>
     <rosparam command="load" file="$(find rate_position_controller)/config/phantom_omni.yaml" />
   </node>
   
   <!-- Rate position controller -->
   <node name="rate_position_controller" pkg="rate_position_controller" type="rate_position_controller.py" output="screen">
-    <param name="master_name" type="string" value="$(arg master_name)"/>
+    <param name="publish_rate" type="double" value="100"/>
     <param name="slave_name" type="string" value="$(arg slave_name)"/>
+    <param name="master_name" type="string" value="$(arg master_name)"/>
+    <param name="reference_frame" type="string" value="$(arg ref_frame)"/>
+    <rosparam param="rpy_offset" subst_value="True">$(arg rpy_offset)</rosparam>
     <rosparam command="load" file="$(find rate_position_controller)/config/phantom_omni.yaml" />
   </node>
 </launch>
