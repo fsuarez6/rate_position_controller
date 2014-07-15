@@ -11,16 +11,15 @@
   <author>Francisco Suarez-Ruiz</author>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>smach</build_depend>
-  <build_depend>smach_ros</build_depend>
+  
+  <build_depend>baxter_core_msgs</build_depend>
   <build_depend>omni_msgs</build_depend>
-  <build_depend>grips_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
   
+  <run_depend>baxter_core_msgs</run_depend>
   <run_depend>smach</run_depend>
   <run_depend>smach_ros</run_depend>
   <run_depend>omni_msgs</run_depend>
-  <run_depend>grips_msgs</run_depend>
   <run_depend>visualization_msgs</run_depend>
 
 </package>

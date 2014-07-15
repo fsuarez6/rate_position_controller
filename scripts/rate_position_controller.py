@@ -14,7 +14,7 @@ import rospy
 # Messages
 from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
-from grips_msgs.msg import GripsState
+from baxter_core_msgs.msg import EndpointState
 from omni_msgs.msg import OmniState, OmniFeedback, OmniButtonEvent
 from geometry_msgs.msg import Vector3, Quaternion, Transform, PoseStamped
 from visualization_msgs.msg import Marker
@@ -101,7 +101,7 @@ class RatePositionController:
     
     # Setup Subscribers/Publishers
     rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
-    rospy.Subscriber(self.slave_state_topic, GripsState, self.cb_slave_state)
+    rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
     self.feedback_pub = rospy.Publisher(self.feedback_topic, OmniFeedback)
     self.ik_mc_pub = rospy.Publisher(self.ik_mc_topic, PoseStamped)
     self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
