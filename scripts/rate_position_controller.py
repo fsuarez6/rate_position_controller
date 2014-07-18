@@ -99,13 +99,6 @@ class RatePositionController:
     self.rate_pivot = np.zeros(3)
     self.rate_gain = self.read_parameter('~rate_gain', 1.0) 
     
-    # Setup Subscribers/Publishers
-    rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
-    rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
-    self.feedback_pub = rospy.Publisher(self.feedback_topic, OmniFeedback)
-    self.ik_mc_pub = rospy.Publisher(self.ik_mc_topic, PoseStamped)
-    self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
-    self.vis_pub = rospy.Publisher('visualization_marker', Marker)
     # Initial values
     self.frame_id = self.read_parameter('~reference_frame', 'world')
     self.colors = TextColors()
@@ -120,6 +113,14 @@ class RatePositionController:
     self.force_feedback = np.zeros(3)
     # Slave command
     self.slave_synch_pos = np.zeros(3)
+    
+    # Setup Subscribers/Publishers
+    rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
+    rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
+    self.feedback_pub = rospy.Publisher(self.feedback_topic, OmniFeedback)
+    self.ik_mc_pub = rospy.Publisher(self.ik_mc_topic, PoseStamped)
+    self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
+    self.vis_pub = rospy.Publisher('visualization_marker', Marker)
     
     self.loginfo('Waiting for [%s] and [%s] topics' % (self.master_state_topic, self.slave_state_topic))
     while not rospy.is_shutdown():
