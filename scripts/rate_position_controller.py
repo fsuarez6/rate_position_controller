@@ -111,8 +111,10 @@ class RatePositionController:
     self.slave_rot = np.array([0, 0, 0, 1])
     self.timer = None
     self.force_feedback = np.zeros(3)
-    # Slave command
+    # Synch
     self.slave_synch_pos = np.zeros(3)
+    self.slave_synch_rot = np.array([0, 0, 0, 1])
+    self.master_synch_rot = np.array([0, 0, 0, 1])
     
     # Setup Subscribers/Publishers
     rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
@@ -149,6 +151,8 @@ class RatePositionController:
     else:
       self.force_feedback = np.zeros(3)
       self.slave_synch_pos = np.array(self.slave_pos)
+      self.slave_synch_rot = np.array(self.slave_rot)
+      self.master_synch_rot = np.array(self.master_rot)
       self.command_pos = np.array(self.slave_pos)
       self.command_rot = np.array(self.slave_rot)
       self.draw_position_region(self.slave_synch_pos)
@@ -159,7 +163,10 @@ class RatePositionController:
   def position_control(user_data, self):
     if self.inside_workspace(self.master_pos):
       self.command_pos = self.slave_synch_pos + self.master_pos / self.position_ratio
-      self.command_rot = np.array(self.master_rot)
+      # TODO: Rotations are driving me crazy! 
+      relative_rot = tr.quaternion_multiply(self.master_synch_rot, tr.quaternion_inverse(self.master_rot))
+      self.command_rot = tr.quaternion_multiply(self.slave_synch_rot, relative_rot)
+      #~ self.command_rot = np.array(self.master_rot)
       return 'stay'
     else:
       self.command_pos = np.array(self.slave_pos)
@@ -191,7 +198,8 @@ class RatePositionController:
       # Send the rate command to the slave
       distance = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) / self.position_ratio
       self.command_pos += (self.rate_gain * distance * self.normalize_vector(self.master_pos)) / self.position_ratio
-      self.command_rot = np.array(self.master_rot)
+      relative_rot = tr.quaternion_multiply(self.master_synch_rot, tr.quaternion_inverse(self.master_rot))
+      self.command_rot = tr.quaternion_multiply(self.slave_synch_rot, relative_rot)
       return 'stay'
     else:
       self.command_pos = np.array(self.slave_pos)
