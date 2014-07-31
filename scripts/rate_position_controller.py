@@ -117,12 +117,12 @@ class RatePositionController:
     self.master_synch_rot = np.array([0, 0, 0, 1])
     
     # Setup Subscribers/Publishers
-    rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
-    rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
     self.feedback_pub = rospy.Publisher(self.feedback_topic, OmniFeedback)
     self.ik_mc_pub = rospy.Publisher(self.ik_mc_topic, PoseStamped)
     self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
     self.vis_pub = rospy.Publisher('visualization_marker', Marker)
+    rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
+    rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
     
     self.loginfo('Waiting for [%s] and [%s] topics' % (self.master_state_topic, self.slave_state_topic))
     while not rospy.is_shutdown():
