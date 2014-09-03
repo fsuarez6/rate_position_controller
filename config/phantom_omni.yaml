@@ -1,26 +1,22 @@
 # publish_rate in Hz
-publish_rate: 1000.0
+publish_rate: 250.0
 # Possible units: [mm, cm, m]
 units: mm
 # Workspace [width, depth, height] = [x, y, z]
 hysteresis: 3.0
 workspace:
-  width: 140.0
+  width: 120.0
   depth: 55.0
-  height: 100.0
+  height: 80.0
   center: [0, 0, 0]
 # Position parameters
 reference_frame: world
 position_ratio: 500
 pivot_dist: 5.0
+axes_mapping: [y, x, z]
 # Force feedback parameters
-k_center: 0.1
+k_center: 0.15
 b_center: 0.003
-k_rate: 0.015
+k_rate: 0.15
 b_rate: 0.003
-rate_gain: 0.5
-vibration:
-  a: 2.0
-  c: 5.0
-  frequency: 30.0
-  duration: 0.3
+rate_gain: 0.001
