@@ -5,13 +5,13 @@ units: mm
 # Workspace [width, depth, height] = [x, y, z]
 hysteresis: 3.0
 workspace:
-  width: 120.0
+  width: 130.0
   depth: 55.0
-  height: 80.0
+  height: 90.0
   center: [0, 0, 0]
 # Position parameters
 reference_frame: world
-position_ratio: 500
+position_ratio: 250
 pivot_dist: 5.0
 axes_mapping: [y, x, z]
 # Force feedback parameters

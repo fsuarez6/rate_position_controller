@@ -55,7 +55,7 @@ class RatePositionController:
       smach.StateMachine.add('POSITION_CONTROL', CBState(self.position_control, cb_args=[self]), 
                              transitions={'stay':'POSITION_CONTROL', 'leave':'RATE_CONTROL', 'aborted': 'aborted'})
       smach.StateMachine.add('RATE_CONTROL', CBState(self.rate_control, cb_args=[self]), 
-                             transitions={'stay':'RATE_CONTROL', 'leave':'POSITION_CONTROL', 'aborted': 'aborted'})
+                             transitions={'stay':'RATE_CONTROL', 'leave':'GO_TO_CENTER', 'aborted': 'aborted'})
     
     # Read all the parameters from the parameter server
     # Topics to interact
