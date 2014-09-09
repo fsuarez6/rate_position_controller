@@ -103,7 +103,6 @@ class RatePositionController:
     # Initial values
     self.frame_id = self.read_parameter('~frame_id', 'world')
     self.colors = TextColors()
-    self.gripper_cmd = 0.0
     self.master_pos = None
     self.master_rot = np.array([0, 0, 0, 1])
     self.master_vel = np.zeros(3)
@@ -119,7 +118,6 @@ class RatePositionController:
     # Setup Subscribers/Publishers
     self.feedback_pub = rospy.Publisher(self.feedback_topic, OmniFeedback)
     self.ik_mc_pub = rospy.Publisher(self.ik_mc_topic, PoseStamped)
-    self.gripper_pub = rospy.Publisher(self.gripper_topic, Float64)
     self.vis_pub = rospy.Publisher('visualization_marker', Marker)
     rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
     rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
@@ -192,11 +190,11 @@ class RatePositionController:
     self.sm.execute()
       
   def shutdown_hook(self):
-    # Stop the state machine
-    self.sm.request_preempt()
     # Stop timers
     self.command_timer.shutdown()
     self.draw_timer.shutdown()
+    # Stop the state machine
+    self.sm.request_preempt()
   
   def read_parameter(self, name, default):
     if not rospy.has_param(name):
@@ -223,14 +221,24 @@ class RatePositionController:
       index = self.position_axes
     if sign == None:
       sign = self.position_sign
-    result = np.array(array)
+    result = np.zeros(len(array))
+    for i, idx in enumerate(index):
+      result[i] = array[idx] * sign[idx]
+    return result
+    
+  def change_force_axes(self, array, index=None, sign=None):
+    if index == None:
+      index = self.position_axes
+    if sign == None:
+      sign = self.position_sign
+    result = np.zeros(len(array))
     for i, idx in enumerate(index):
       result[i] = array[idx] * sign[i]
     return result
   
   def send_feedback(self):
     feedback_msg = OmniFeedback()
-    force = self.change_axes(self.force_feedback)
+    force = self.change_force_axes(self.force_feedback)
     pos = self.change_axes(self.center_pos)
     feedback_msg.force = Vector3(*force)
     feedback_msg.position = Vector3(*pos)
@@ -244,16 +252,6 @@ class RatePositionController:
     self.master_vel = self.change_axes(vel)
     self.master_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
     self.master_dir = self.normalize_vector(self.master_vel)
-    # Control the gripper
-    cmd = self.gripper_cmd
-    if msg.close_gripper:
-      cmd = 5.0
-    else:
-      cmd = -5.0
-    try:
-      self.gripper_pub.publish(cmd)
-    except rospy.exceptions.ROSException:
-      pass
   
   def cb_slave_state(self, msg):
     self.slave_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
