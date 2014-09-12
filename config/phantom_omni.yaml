@@ -1,5 +1,5 @@
 # publish_rate in Hz
-publish_rate: 250.0
+publish_rate: 500.0
 # Possible units: [mm, cm, m]
 units: mm
 # Workspace [width, depth, height] = [x, y, z]

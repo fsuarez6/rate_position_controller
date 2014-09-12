@@ -16,7 +16,7 @@ from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
 from baxter_core_msgs.msg import EndpointState
 from omni_msgs.msg import OmniState, OmniFeedback, OmniButtonEvent
-from geometry_msgs.msg import Vector3, Quaternion, Transform, PoseStamped, Point
+from geometry_msgs.msg import Vector3, Quaternion, Transform, PoseStamped, Point, Wrench
 from visualization_msgs.msg import Marker
 # State Machine
 import smach
@@ -65,7 +65,6 @@ class RatePositionController:
     self.feedback_topic = '/%s/force_feedback' % master_name
     self.slave_state_topic = '/%s/state' % slave_name
     self.ik_mc_topic = '/%s/ik_command' % slave_name
-    self.gripper_topic = '/%s/GRIP/command' % slave_name
     # Workspace definition
     self.units = self.read_parameter('~units', 'mm')
     width = self.read_parameter('~workspace/width', 140.0)
@@ -111,6 +110,7 @@ class RatePositionController:
     self.slave_rot = np.array([0, 0, 0, 1])
     self.timer = None
     self.force_feedback = np.zeros(3)
+    self.pos_force_feedback = np.zeros(3)
     # Synch
     self.slave_synch_pos = np.zeros(3)
     self.slave_synch_rot = np.array([0, 0, 0, 1])
@@ -121,6 +121,7 @@ class RatePositionController:
     self.vis_pub = rospy.Publisher('visualization_marker', Marker)
     rospy.Subscriber(self.master_state_topic, OmniState, self.cb_master_state)
     rospy.Subscriber(self.slave_state_topic, EndpointState, self.cb_slave_state)
+    rospy.Subscriber('/takktile/force_feedback', Wrench, self.feedback_cb)
     
     self.loginfo('Waiting for [%s] and [%s] topics' % (self.master_state_topic, self.slave_state_topic))
     while not rospy.is_shutdown():
@@ -158,8 +159,10 @@ class RatePositionController:
   def position_control(user_data, self):
     if self.inside_workspace(self.master_pos):
       self.command_pos = self.slave_synch_pos + self.master_pos / self.position_ratio
+      self.force_feedback = self.pos_force_feedback
       return 'stay'
     else:
+      self.force_feedback = np.zeros(3)
       self.command_pos = np.array(self.slave_pos)
       self.rate_pivot = self.master_pos
       self.loginfo('State machine transitioning: POSITION_CONTROL:leave-->RATE_CONTROL')
@@ -256,6 +259,9 @@ class RatePositionController:
   def cb_slave_state(self, msg):
     self.slave_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
     self.slave_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+  
+  def feedback_cb(self, msg):
+    self.pos_force_feedback = np.array([msg.force.x, msg.force.y, msg.force.z])
   
   def publish_command(self, event):
     position, orientation = self.command_pos, self.command_rot
