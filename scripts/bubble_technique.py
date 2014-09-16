@@ -74,6 +74,7 @@ class RatePositionController:
     self.workspace = np.array([width, depth, height])
     self.hysteresis = self.read_parameter('~hysteresis', 3.0)
     # Force feedback parameters
+    self.locked = False
     self.k_center = self.read_parameter('~k_center', 0.1)
     self.b_center = self.read_parameter('~b_center', 0.003)
     self.k_rate = self.read_parameter('~k_rate', 0.05)
@@ -145,7 +146,7 @@ class RatePositionController:
     
   @smach.cb_interface(outcomes=['lock', 'succeeded', 'aborted'])
   def go_to_center(user_data, self):
-    if not np.allclose(np.zeros(3), self.master_pos, atol=self.hysteresis):
+    if not np.allclose(np.zeros(3), self.master_pos, atol=self.hysteresis) or self.locked:
       self.force_feedback = (self.k_center * self.master_pos + self.b_center * self.master_vel) * -1.0
       return 'lock'
     else:
@@ -157,7 +158,7 @@ class RatePositionController:
   
   @smach.cb_interface(outcomes=['stay', 'leave', 'aborted'])
   def position_control(user_data, self):
-    if self.inside_workspace(self.master_pos):
+    if self.inside_workspace(self.master_pos) and not self.locked:
       self.command_pos = self.slave_synch_pos + self.master_pos / self.position_ratio
       self.force_feedback = self.pos_force_feedback
       return 'stay'
@@ -170,7 +171,7 @@ class RatePositionController:
   
   @smach.cb_interface(outcomes=['stay', 'leave', 'aborted'])
   def rate_control(user_data, self):
-    if not self.inside_workspace(self.master_pos):
+    if not (self.inside_workspace(self.master_pos) or self.locked):
       penetration = sqrt(np.sum((self.master_pos - self.rate_pivot) ** 2)) * self.normalize_vector(self.master_pos)
       # Send the force feedback to the master
       self.force_feedback = (self.k_rate * penetration + self.b_rate * self.master_vel) * -1.0
@@ -255,6 +256,7 @@ class RatePositionController:
     self.master_vel = self.change_axes(vel)
     self.master_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
     self.master_dir = self.normalize_vector(self.master_vel)
+    self.locked = msg.locked
   
   def cb_slave_state(self, msg):
     self.slave_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
