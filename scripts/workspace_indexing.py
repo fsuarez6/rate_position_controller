@@ -56,13 +56,14 @@ class RatePositionController:
                              transitions={'stay':'POSITION_CONTROL', 'leave':'GO_TO_CENTER', 'aborted': 'aborted'})
     
     # Read all the parameters from the parameter server
+    self.pp_gain = float(self.read_parameter('~pp_gain', 0.0))
     # Topics to interact
     master_name = self.read_parameter('~master_name', 'phantom')
     slave_name = self.read_parameter('~slave_name', 'grips')
     self.master_state_topic = '/%s/state' % master_name
     self.feedback_topic = '/%s/force_feedback' % master_name
     self.slave_state_topic = '/%s/state' % slave_name
-    self.ik_mc_topic = '/%s/ik_command' % slave_name
+    self.ik_mc_topic = '/%s/raw_ik_command' % slave_name
     # Indexing parameters
     self.locked = False
     self.center_pos = np.array([0, 0, 0])
@@ -90,6 +91,7 @@ class RatePositionController:
     self.master_vel = np.zeros(3)
     self.master_dir = np.zeros(3)
     self.slave_pos = None
+    self.command_pos = None
     self.slave_rot = np.array([0, 0, 0, 1])
     self.timer = None
     self.force_feedback = np.zeros(3)
@@ -128,7 +130,10 @@ class RatePositionController:
   @smach.cb_interface(outcomes=['lock', 'succeeded', 'aborted'])
   def go_to_center(user_data, self):
     if not self.locked:
-      self.rate.sleep()
+      try:
+        self.rate.sleep()
+      except rospy.ROSInterruptException:
+        pass
       return 'lock'
     else:
       self.force_feedback = np.zeros(3)
@@ -143,7 +148,10 @@ class RatePositionController:
     if self.locked:
       self.command_pos = self.slave_synch_pos + self.master_pos / self.position_ratio
       self.force_feedback = self.pos_force_feedback
-      self.rate.sleep()
+      try:
+        self.rate.sleep()
+      except rospy.ROSInterruptException:
+        pass
       return 'stay'
     else:
       self.force_feedback = np.zeros(3)
@@ -218,6 +226,9 @@ class RatePositionController:
   def cb_slave_state(self, msg):
     self.slave_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
     self.slave_rot = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+    # Implement here the position-position control
+    if self.master_pos != None and self.command_pos != None:
+      self.pos_force_feedback = self.pp_gain * (self.slave_pos - self.command_pos)
   
   def feedback_cb(self, msg):
     self.pos_force_feedback = np.array([msg.force.x, msg.force.y, msg.force.z])
@@ -240,5 +251,5 @@ if __name__ == '__main__':
   try:
     controller = RatePositionController()
     controller.execute()
-  except rospy.exceptions.ROSInterruptException:
+  except rospy.ROSInterruptException:
       pass
